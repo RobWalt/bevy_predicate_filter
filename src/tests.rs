@@ -1,32 +1,38 @@
-use bevy_ecs::{component::Component, query::QueryItem, world::World};
+use bevy_ecs::{component::Component, query::ROQueryItem, world::World};
 
 use crate::prelude::{Predicate, PredicateFilter};
 
-#[derive(Component, Debug, PartialEq)]
-struct A(usize);
-
-#[derive(Component)]
-pub struct B(usize);
-
-pub struct NonZeroB;
-
-impl PredicateFilter for NonZeroB {
-    type Data = &'static B;
-    fn filter_predicate(item: QueryItem<Self::Data>) -> bool {
-        item.0 != 0
-    }
-}
-
 #[test]
 fn query_predicate_basic() {
+    #[derive(Component, Debug, PartialEq)]
+    struct FishName(String);
+
+    #[derive(Component)]
+    pub struct FishSize(usize);
+
+    pub struct BigFish;
+
+    impl PredicateFilter for BigFish {
+        type Data = &'static FishSize;
+        fn filter_predicate(item: ROQueryItem<Self::Data>) -> bool {
+            item.0 > 5
+        }
+    }
+
     let mut world = World::new();
-    world.spawn((A(1), B(0)));
-    world.spawn((A(2), B(1)));
-    world.spawn((A(3), B(2)));
+    world.spawn((FishName(String::from("Albert")), FishSize(3)));
+    world.spawn((FishName(String::from("Freddy")), FishSize(8)));
+    world.spawn((FishName(String::from("Ronny")), FishSize(10)));
 
     let values = world
-        .query_filtered::<&A, Predicate<NonZeroB>>()
+        .query_filtered::<&FishName, Predicate<BigFish>>()
         .iter(&mut world)
         .collect::<Vec<_>>();
-    assert_eq!(values, vec![&A(2), &A(3)]);
+    assert_eq!(
+        values,
+        vec![
+            &FishName(String::from("Freddy")),
+            &FishName(String::from("Ronny"))
+        ]
+    );
 }
